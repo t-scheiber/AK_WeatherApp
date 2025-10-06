@@ -1,0 +1,19 @@
+# Environment variables
+.env
+.env.local
+
+# API keys config (if using JS module)
+config.js
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
