@@ -1,0 +1,19 @@
+{
+  "name": "ak-weather-app",
+  "version": "1.0.0",
+  "description": "Weather App",
+  "scripts": {
+    "generate-config": "node generate-config.js",
+    "setup": "node generate-config.js",
+    "build": "node generate-config.js",
+    "dev": "node generate-config.js"
+  },
+  "keywords": [
+    "weather",
+    "api",
+    "openweathermap"
+  ],
+  "author": "",
+  "license": "ISC"
+}
+

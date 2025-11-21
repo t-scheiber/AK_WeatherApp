@@ -1,0 +1,26 @@
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+# Install dependencies (if any)
+# Note: config.js generation happens in the build phase when env vars are available
+cmds = ["npm install"]
+
+[phases.build]
+# Generate config.js from environment variables
+# This runs the generate-config.js script which reads from process.env
+# Environment variables (OPENWEATHER_API_KEY, GOOGLE_MAPS_API_KEY) must be set in Coolify
+cmds = ["npm run build"]
+
+# Use a simple HTTP server to serve the static files
+# This ensures config.js (generated in build phase) is included
+[start]
+# Use serve to serve static files
+# Coolify automatically provides PORT environment variable
+# -s flag enables single-page app mode (serves index.html for all routes)
+# -l flag sets the listen address and port
+cmd = "sh -c 'npx --yes serve -s . -l ${PORT:-3000}'"
+
+[variables]
+NODE_ENV = "production"
+
