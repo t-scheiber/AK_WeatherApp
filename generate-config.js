@@ -21,11 +21,7 @@ if (fs.existsSync(envPath)) {
 
 const openweatherApiKey = process.env.OPENWEATHER_API_KEY || "";
 
-const configContent = `
-const CONFIG = {
-  OPENWEATHER_API_KEY: '${openweatherApiKey}'
-};
-`;
+const configContent = `const CONFIG = ${JSON.stringify({ OPENWEATHER_API_KEY: openweatherApiKey }, null, 2)};\n`;
 
 const configPath = path.join(__dirname, "config.js");
 fs.writeFileSync(configPath, configContent, "utf8");

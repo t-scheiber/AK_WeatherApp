@@ -1,0 +1,20 @@
+name: Publish validated static Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: static-pages
+  cancel-in-progress: false
+jobs:
+  pages:
+    if: github.repository == 't-scheiber/AK_WeatherApp' && github.ref == 'refs/heads/main' && vars.STATIC_PAGES_ENABLED == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: t-scheiber/maintenance-workflows/.github/workflows/static-pages.yml@a119e116c29a9269a6399f3569711fc36dd9261e
+    with:
+      tools_ref: 'a119e116c29a9269a6399f3569711fc36dd9261e'
