@@ -19,3 +19,7 @@ Thumbs.db
 .cursor/
 .chatgpt/
 .gemini/
+
+node_modules/
+dist/
+artifacts/
