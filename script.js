@@ -22,14 +22,20 @@ function apicalls() {
   let lon = "16.373819";
 
   function makeWeatherAPICall(lat, lon) {
-    let currentURL = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&lang=de&units=metric&appid=${openweatherApiKey}`;
-    let forecastURL = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&lang=de&units=metric&appid=${openweatherApiKey}`;
+    let currentURL = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&lang=de&units=metric&appid=${encodeURIComponent(openweatherApiKey)}`;
+    let forecastURL = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&lang=de&units=metric&appid=${encodeURIComponent(openweatherApiKey)}`;
 
     $.when($.getJSON(currentURL), $.getJSON(forecastURL))
       .done(function (currentResponse, forecastResponse) {
         const currentData = currentResponse[0];
         const forecastData = forecastResponse[0];
 
+        if (!validWeatherRecord(currentData) || !Number.isFinite(currentData.main.feels_like) ||
+            !Number.isFinite(currentData.sys?.sunrise) || !Number.isFinite(currentData.sys?.sunset) ||
+            !Array.isArray(forecastData?.list) || !forecastData.list.every(validWeatherRecord)) {
+          alert("Error fetching weather data: invalid weather response.");
+          return;
+        }
         const combinedData = {
           current: {
             dt: currentData.dt,
@@ -37,8 +43,8 @@ function apicalls() {
             feels_like: currentData.main.feels_like,
             clouds: currentData.clouds ? currentData.clouds.all : 0,
             humidity: currentData.main.humidity,
-            wind_speed: currentData.wind ? currentData.wind.speed : 0,
-            wind_deg: currentData.wind ? currentData.wind.deg : 0,
+            wind_speed: Number.isFinite(currentData.wind?.speed) ? currentData.wind.speed : null,
+            wind_deg: Number.isFinite(currentData.wind?.deg) ? currentData.wind.deg : null,
             sunrise: currentData.sys.sunrise,
             sunset: currentData.sys.sunset,
             weather: currentData.weather,
@@ -49,11 +55,7 @@ function apicalls() {
         geoAPIcall(lat, lon);
       })
       .fail(function (jqXHR2, textStatus2, errorThrown2) {
-        const errorMsg =
-          jqXHR2.responseJSON?.message ||
-          errorThrown2 ||
-          textStatus2 ||
-          "Unknown error";
+        const errorMsg = `HTTP ${jqXHR2.status || "network error"}`;
 
         let alertMsg = `Error fetching weather data: ${errorMsg}\n\n`;
 
@@ -79,14 +81,18 @@ function apicalls() {
 
   function transformForecastToDaily(forecastData) {
     if (!forecastData || !forecastData.list || forecastData.list.length === 0) {
-      return [null, null, null, null, null, null, null, null];
+      return [null, null, null, null, null, null];
     }
 
     const dailyGroups = {};
 
     forecastData.list.forEach((item) => {
       const date = new Date(item.dt * 1000);
-      const dayKey = date.toISOString().split("T")[0];
+      const dayKey = [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0"),
+      ].join("-");
 
       if (!dailyGroups[dayKey]) {
         dailyGroups[dayKey] = [];
@@ -128,8 +134,8 @@ function apicalls() {
         weather: middayForecast.weather,
         clouds: middayForecast.clouds ? middayForecast.clouds.all : 0,
         humidity: middayForecast.main.humidity,
-        wind_speed: middayForecast.wind ? middayForecast.wind.speed : 0,
-        wind_deg: middayForecast.wind ? middayForecast.wind.deg : 0,
+        wind_speed: Number.isFinite(middayForecast.wind?.speed) ? middayForecast.wind.speed : null,
+        wind_deg: Number.isFinite(middayForecast.wind?.deg) ? middayForecast.wind.deg : null,
       });
     });
 
@@ -166,20 +172,30 @@ function apicalls() {
     return dailyArray;
   }
 
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      function (position) {
-        lat = position.coords.latitude;
-        lon = position.coords.longitude;
-        makeWeatherAPICall(lat, lon);
-      },
-      function (error) {
-        makeWeatherAPICall(lat, lon);
-      }
-    );
-  } else {
+  let resolved = false;
+  let timer;
+  function finish(position) {
+    if (resolved) return;
+    resolved = true;
+    clearTimeout(timer);
+    const coords = position?.coords;
+    if (Number.isFinite(coords?.latitude) && Number.isFinite(coords?.longitude) &&
+        Math.abs(coords.latitude) <= 90 && Math.abs(coords.longitude) <= 180) {
+      lat = coords.latitude;
+      lon = coords.longitude;
+    }
     makeWeatherAPICall(lat, lon);
   }
+  if (navigator.geolocation) {
+    timer = setTimeout(() => finish(), 8000);
+    try {navigator.geolocation.getCurrentPosition(finish, () => finish(), {timeout: 8000});}
+    catch {finish();}
+  } else {finish();}
+}
+function validWeatherRecord(data) {
+  return data && Number.isFinite(data.dt) && Number.isFinite(data.main?.temp) &&
+    Number.isFinite(data.main?.humidity) && Array.isArray(data.weather) &&
+    /^[0-9]{2}[dn]$/.test(data.weather[0]?.icon || "") && typeof data.weather[0]?.description === "string";
 }
 function callbackFuncWithData(data) {
   if (!$("#locationText").text() || $("#locationText").text().trim() === "") {
@@ -217,7 +233,7 @@ function callbackFuncWithData(data) {
     ". " +
     months[d.getMonth()] +
     " " +
-    d.getUTCFullYear();
+    d.getFullYear();
   let uhrzeitText =
     addNull(d.getHours()) + ":" + addNull(d.getMinutes()) + " Uhr";
 
@@ -233,7 +249,7 @@ function callbackFuncWithData(data) {
     "@2x.png";
   image.id = "currentWeatherPic";
   image.src = searchPic.src;
-  imageParent.appendChild(image);
+  imageParent.replaceChildren(image);
 
   $("#currentWeatherText").text(data.current.weather[0].description);
   $("#currentWeatherTemp").text("Temperatur: " + data.current.temp + "°C");
@@ -245,10 +261,12 @@ function callbackFuncWithData(data) {
     data.current.humidity + "% Luftfeuchtigkeit"
   );
   $("#currentWeatherWind").text(
-    "Windgeschwindigkeit: " + data.current.wind_speed + " m/s"
+    "Windgeschwindigkeit: " + (Number.isFinite(data.current.wind_speed)
+      ? data.current.wind_speed + " m/s" : "nicht verfügbar")
   );
   $("#currentWeatherWindDirection").text(
-    "Windrichtung: " + data.current.wind_deg + "°"
+    "Windrichtung: " + (Number.isFinite(data.current.wind_deg)
+      ? data.current.wind_deg + "°" : "nicht verfügbar")
   );
 
   let dateSunrise = new Date(data.current.sunrise * 1000);
@@ -273,7 +291,7 @@ function callbackFuncWithData(data) {
     $(
       `#textTag${dayIndex}, #imgTag${dayIndex}, #descrTag${dayIndex}, #tempTag${dayIndex}`
     ).each(function () {
-      $(this).parent().hide();
+      $(this).empty().hide();
     });
   }
 
@@ -281,7 +299,7 @@ function callbackFuncWithData(data) {
     $(
       `#textTag${dayIndex}, #imgTag${dayIndex}, #descrTag${dayIndex}, #tempTag${dayIndex}`
     ).each(function () {
-      $(this).parent().show();
+      $(this).show();
     });
   }
 
@@ -354,11 +372,11 @@ function callbackFuncWithData(data) {
     showColumn(dayIndex);
   }
 
-  if (data.daily[1]) renderDayForecast(1, "Morgen", true);
-  if (data.daily[2]) renderDayForecast(2, "Übermorgen", true);
-  if (data.daily[3]) renderDayForecast(3);
-  if (data.daily[4]) renderDayForecast(4);
-  if (data.daily[5]) renderDayForecast(5);
+  renderDayForecast(1, "Morgen", true);
+  renderDayForecast(2, "Übermorgen");
+  renderDayForecast(3);
+  renderDayForecast(4);
+  renderDayForecast(5);
 }
 function geoAPIcall(lat, lon) {
   if (typeof CONFIG === "undefined" || !CONFIG.OPENWEATHER_API_KEY) {
@@ -366,7 +384,7 @@ function geoAPIcall(lat, lon) {
     return;
   }
 
-  const geoAPIurl = `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${CONFIG.OPENWEATHER_API_KEY}`;
+  const geoAPIurl = `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${encodeURIComponent(CONFIG.OPENWEATHER_API_KEY)}`;
 
   $.getJSON(geoAPIurl, geoLocCallbackFuncWithData).fail(function (
     jqXHR,
