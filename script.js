@@ -43,8 +43,8 @@ function apicalls() {
             feels_like: currentData.main.feels_like,
             clouds: currentData.clouds ? currentData.clouds.all : 0,
             humidity: currentData.main.humidity,
-            wind_speed: currentData.wind ? currentData.wind.speed : 0,
-            wind_deg: currentData.wind ? currentData.wind.deg : 0,
+            wind_speed: Number.isFinite(currentData.wind?.speed) ? currentData.wind.speed : null,
+            wind_deg: Number.isFinite(currentData.wind?.deg) ? currentData.wind.deg : null,
             sunrise: currentData.sys.sunrise,
             sunset: currentData.sys.sunset,
             weather: currentData.weather,
@@ -88,7 +88,11 @@ function apicalls() {
 
     forecastData.list.forEach((item) => {
       const date = new Date(item.dt * 1000);
-      const dayKey = date.toISOString().split("T")[0];
+      const dayKey = [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0"),
+      ].join("-");
 
       if (!dailyGroups[dayKey]) {
         dailyGroups[dayKey] = [];
@@ -130,8 +134,8 @@ function apicalls() {
         weather: middayForecast.weather,
         clouds: middayForecast.clouds ? middayForecast.clouds.all : 0,
         humidity: middayForecast.main.humidity,
-        wind_speed: middayForecast.wind ? middayForecast.wind.speed : 0,
-        wind_deg: middayForecast.wind ? middayForecast.wind.deg : 0,
+        wind_speed: Number.isFinite(middayForecast.wind?.speed) ? middayForecast.wind.speed : null,
+        wind_deg: Number.isFinite(middayForecast.wind?.deg) ? middayForecast.wind.deg : null,
       });
     });
 
@@ -229,7 +233,7 @@ function callbackFuncWithData(data) {
     ". " +
     months[d.getMonth()] +
     " " +
-    d.getUTCFullYear();
+    d.getFullYear();
   let uhrzeitText =
     addNull(d.getHours()) + ":" + addNull(d.getMinutes()) + " Uhr";
 
@@ -257,10 +261,12 @@ function callbackFuncWithData(data) {
     data.current.humidity + "% Luftfeuchtigkeit"
   );
   $("#currentWeatherWind").text(
-    "Windgeschwindigkeit: " + data.current.wind_speed + " m/s"
+    "Windgeschwindigkeit: " + (Number.isFinite(data.current.wind_speed)
+      ? data.current.wind_speed + " m/s" : "nicht verfügbar")
   );
   $("#currentWeatherWindDirection").text(
-    "Windrichtung: " + data.current.wind_deg + "°"
+    "Windrichtung: " + (Number.isFinite(data.current.wind_deg)
+      ? data.current.wind_deg + "°" : "nicht verfügbar")
   );
 
   let dateSunrise = new Date(data.current.sunrise * 1000);
