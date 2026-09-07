@@ -44,3 +44,5 @@ table tr:first-child td {
 table tr td:last-child {
     border-right: 0;
 }
+/* Keep all forecast columns accessible without widening narrow viewports. */
+.forecast-scroll { max-width: 100%; overflow-x: auto; }
