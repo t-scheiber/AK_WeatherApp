@@ -2,7 +2,7 @@
 
 A practice project: a current weather and five-day forecast page in vanilla JavaScript, using the OpenWeatherMap API. The page text is German.
 
-Live site: https://t-scheiber.github.io/AK_WeatherApp/ (see [Deployment](#deployment) for what the published page shows).
+Live site: https://weatherapp-vanillajs.thomasscheiber.com
 
 ## What the app does
 
@@ -58,7 +58,11 @@ Without a key, `config.js` holds an empty value. The page shows an "API key not 
 
 ## Deployment
 
-`.github/workflows/pages.yml` publishes the build to GitHub Pages on pushes to `main`. It runs only when the repository variable `STATIC_PAGES_ENABLED` is `true`. The workflow passes no secrets, so the published `config.js` contains an empty key. The live page therefore shows the "API key not configured" alert and no weather data.
+The live site runs on a self-hosted Coolify server. The build runs `npm ci` and `npm run build` with `OPENWEATHER_API_KEY` set as a build variable, and nginx serves `dist/`.
+
+`.github/workflows/pages.yml` also publishes the build to GitHub Pages on pushes to `main`, at https://t-scheiber.github.io/AK_WeatherApp/. It runs only when the repository variable `STATIC_PAGES_ENABLED` is `true`. The workflow passes no secrets, so that copy's `config.js` contains an empty key. It shows the "API key not configured" alert and no weather data.
+
+`nixpacks.toml` describes a third setup that serves the repository root with `serve`. The root has no `assets/` folder, so serve `dist/` instead.
 
 ## Project files
 
